@@ -95,6 +95,7 @@ app.post("/payment/success", async (req, res) => {
 
     if (!tenderRef || !userEmail) {
       return res.status(400).json({ message: "Missing payment details" });
+      console.log(res);
     }
 
     const tender = await Tender.findOne({ BDR_No: Number(tenderRef) }); // ✅ Convert tenderRef to number
