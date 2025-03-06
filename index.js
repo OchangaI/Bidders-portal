@@ -4,8 +4,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 import "./utils/scheduler.js";
-<<<<<<< HEAD
-import cron from "node-cron";
 import { loadInitialData } from "./controllers/tenderController.js";
 import paypalRoutes from "./routes/paypalRoutes.js";
 import Tender from "./models/Tender.js";
@@ -13,17 +11,11 @@ import axios from "axios";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import "./utils/cronJobs.js"; // Import the cron jobs
 import { sendDailyNotifications } from "./controllers/subscriptionController.js";
-=======
-import notificationRoutes from "./routes/notificationRoutes.js";
->>>>>>> ffb1673 (adding email forwarding)
+
+// import notificationRoutes from "./routes/notificationRoutes.js";
+
 
 import cron from "node-cron";
-import { loadInitialData } from "./controllers/tenderController.js";
-import paypalRoutes from "./routes/paypalRoutes.js";
-import Tender from "./models/Tender.js";
-import axios from "axios";
-import subscriptionRoutes from "./routes/subscriptionRoutes.js";
-import sendDailyNotifications from "./utils/notificationScheduler.js";
 
 dotenv.config(); // Load environment variables
 
@@ -39,7 +31,6 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-<<<<<<< HEAD
 const allowedOrigins = [
   'http://localhost:3000',  // Frontend
   'http://localhost:5173',  // Admin Dashboard
@@ -94,11 +85,9 @@ router.get('/admin/profile', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
   }
 });
-=======
 app.use(cors({ origin: "https://biddersportal.com" })); // Allow frontend only
 app.use(errorMiddleware);
 
->>>>>>> ffb1673 (adding email forwarding)
 // ✅ Store payment when user pays
 app.post("/payment/success", async (req, res) => {
   try {
@@ -118,7 +107,6 @@ app.post("/payment/success", async (req, res) => {
       tender.paidUsers.push(userEmail);
       await tender.save();
     }
-<<<<<<< HEAD
 
     // ✅ Send Confirmation Email
     const emailPayload = {
@@ -177,26 +165,26 @@ app.post("/payment/success", async (req, res) => {
       }
   }
 
-=======
+// =======
 
-    // ✅ Send Confirmation Email
-    const emailPayload = {
-      recipient: userEmail, // Email address
-      name: userEmail.split("@")[0], // Extract name from email
-      subject: "Tender Purchase Confirmation",
-      message: `
-          <h2>Congratulations! 🎉</h2>
-          <p>You have successfully purchased the tender:</p>
-          <strong>${tender.Tender_Brief}</strong>
-          <p>Country: ${tender.Country}</p>
-          <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
-          <p><a href="${tender.FileUrl}" target="_blank">Download Tender Document</a></p>
-          <p>Thank you for using our platform!</p>
-      `,
-  };
+//     // ✅ Send Confirmation Email
+//     const emailPayload = {
+//       recipient: userEmail, // Email address
+//       name: userEmail.split("@")[0], // Extract name from email
+//       subject: "Tender Purchase Confirmation",
+//       message: `
+//           <h2>Congratulations! 🎉</h2>
+//           <p>You have successfully purchased the tender:</p>
+//           <strong>${tender.Tender_Brief}</strong>
+//           <p>Country: ${tender.Country}</p>
+//           <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
+//           <p><a href="${tender.FileUrl}" target="_blank">Download Tender Document</a></p>
+//           <p>Thank you for using our platform!</p>
+//       `,
+//   };
   
-  console.log("📩 Sending Email Payload:", emailPayload); // Log the payload
->>>>>>> ffb1673 (adding email forwarding)
+//   console.log("📩 Sending Email Payload:", emailPayload); // Log the payload
+// >>>>>>> ffb1673 (adding email forwarding)
   
   try {
       const emailResponse = await axios.post(
@@ -256,7 +244,7 @@ import authRoutes from "./routes/authRoutes.js";
 import tenderRoutes from "./routes/tenderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import preQualificationRoutes from "./routes/preQualificationRoutes.js";
-<<<<<<< HEAD
+
 import membershipRoutes from "./routes/membershipRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import biddingAssistanceRoutes from "./routes/biddingAssistanceRoutes.js";
@@ -275,7 +263,6 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/bidding-assistance", biddingAssistanceRoutes);
 // app.use("/api/tenders/purchased", purchasedTendersRoutes);
 
-=======
 
 app.use(cors({ origin: process.env.FRONTEND_URL }));
 
@@ -287,22 +274,19 @@ app.use("/api/payments", paypalRoutes);
 app.use("/api/notifications", subscriptionRoutes);
 app.use("/api/prequalification", preQualificationRoutes);
 
->>>>>>> ffb1673 (adding email forwarding)
 // ✅ Schedule the tender import to run every 24 hours (midnight)
 cron.schedule("0 0 * * *", async () => {
   console.log("⏳ Starting scheduled tender import...");
   await loadInitialData();
 });
 
-<<<<<<< HEAD
 // Schedule to run every day at 6 AM
 cron.schedule("0 8 * * *", () => {
   console.log("Running daily tender notifications...");
   sendDailyNotifications();
 });
 
-=======
->>>>>>> ffb1673 (adding email forwarding)
+
 // ✅ Database Connection and Server Start
 const startServer = async () => {
   try {

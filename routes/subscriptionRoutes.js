@@ -1,6 +1,5 @@
 import express from "express";
 import Subscription from "../models/Subscription.js";
-<<<<<<< HEAD
 import { subscribeUser, getSubscribers, initiatePayment } from "../controllers/subscriptionController.js";
 
 const router = express.Router();
@@ -9,11 +8,6 @@ router.post("/initiate-payment", initiatePayment); // New route to start payment
 router.post("/subscribe", subscribeUser); // Verifies payment and subscribes user
 router.get("/", getSubscribers); // Fetch all subscribers
 
-=======
-import Tender from "../models/Tender.js";
-import axios from "axios";
-
-const router = express.Router();
 
 // ✅ Save user subscription after payment
 router.post("/subscribe", async (req, res) => {
@@ -66,6 +60,5 @@ router.get("/my-subscription", async (req, res) => {
     res.status(500).json({ message: "Error fetching subscription", error: error.message });
   }
 });
->>>>>>> ffb1673 (adding email forwarding)
 
 export default router;

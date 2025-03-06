@@ -1,16 +1,13 @@
 import express from "express";
 import axios from "axios";
 import PreQualification from "../models/PreQualification.js";
-<<<<<<< HEAD
+
 import { verifyAdmin } from "../middleware/adminMiddleware.js";
-=======
->>>>>>> ffb1673 (adding email forwarding)
 import dotenv from "dotenv";
 
 dotenv.config();
 const router = express.Router();
 
-<<<<<<< HEAD
 // Function to send prequalification email
 const sendPrequalificationEmail = async (to, type, variables) => {
   console.log(`Sending email to ${to} with type ${type} and variables ${JSON.stringify(variables)}`);
@@ -59,8 +56,6 @@ const sendPrequalificationEmail = async (to, type, variables) => {
   );
 };
 
-=======
->>>>>>> ffb1673 (adding email forwarding)
 // ✅ Process Pre-Qualification Submission & Payment
 router.post("/submit", async (req, res) => {
   try {
@@ -93,12 +88,12 @@ router.post("/submit", async (req, res) => {
         tx_ref,
         amount: amountPaid,
         currency,
-<<<<<<< HEAD
+
         redirect_url: 'https://biddersportal.com/prequalification-success',
         // redirect_url: 'http://localhost:3000/prequalification-success',
-=======
+
         redirect_url: `${process.env.FRONTEND_URL}/prequalification-success`,
->>>>>>> ffb1673 (adding email forwarding)
+
         customer: { email: emailAddress, phone_number: phoneNumber, name: companyName },
         customizations: {
           title: `${type} Pre-Qualification`,
@@ -139,7 +134,6 @@ router.post("/submit", async (req, res) => {
       message: "Payment initiated successfully",
       paymentLink: paymentResponse.data.data.link,
     });
-<<<<<<< HEAD
 
     // Send prequalification email
     try {
@@ -147,15 +141,13 @@ router.post("/submit", async (req, res) => {
     } catch (emailError) {
       console.error("Error sending prequalification email:", emailError);
     }
-=======
->>>>>>> ffb1673 (adding email forwarding)
+
   } catch (error) {
     console.error("Error processing pre-qualification:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-<<<<<<< HEAD
 /**
  * Update prequalification request status and send notification emails
  */
@@ -180,8 +172,6 @@ router.put("/update-status", async (req, res) => {
   }
 });
 
-=======
->>>>>>> ffb1673 (adding email forwarding)
 // ✅ Confirm Payment & Update Status
 router.post("/confirm-payment", async (req, res) => {
   try {
@@ -235,7 +225,7 @@ router.post("/confirm-payment", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
+
 // Get all prequalification requests
 router.get("/", async (req, res) => {
   try {
@@ -255,8 +245,10 @@ router.get("/:id", async (req, res) => {
     }
     res.status(200).json(request);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching prequalification request", error });
-=======
+        res.status(500).json({ message: "Error fetching prequalification request", error });
+      }
+    });
+
 // ✅ Fetch User Pre-Qualifications
 router.get("/user/:email", async (req, res) => {
   try {
@@ -266,7 +258,6 @@ router.get("/user/:email", async (req, res) => {
   } catch (error) {
     console.error("Error fetching pre-qualifications:", error);
     res.status(500).json({ message: "Server error" });
->>>>>>> ffb1673 (adding email forwarding)
   }
 });
 
