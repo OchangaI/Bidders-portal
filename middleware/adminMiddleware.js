@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = 'https://cbdbitjcgjlvcezcnojh.supabase.co';
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZGJpdGpjZ2psdmNlemNub2poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNzY5OTAwMCwiZXhwIjoyMDUzMjc1MDAwfQ.VZMhsfJucljLP0IfxVZwbel5oYVLkWnHI9To3zo9O24';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const verifyAdmin = async (req, res, next) => {
