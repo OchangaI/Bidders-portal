@@ -85,7 +85,7 @@ router.get('/admin/profile', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
   }
 });
-app.use(cors({ origin: "https://biddersportal.com" })); // Allow frontend only
+// app.use(cors({ origin: "https://biddersportal.com" })); // Allow frontend only
 app.use(errorMiddleware);
 
 // ✅ Store payment when user pays
