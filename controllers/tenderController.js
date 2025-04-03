@@ -26,6 +26,11 @@ export const loadInitialData = async () => {
     // Fetch tenders from the API
     const tenders = await fetchTendersFromApi();
 
+    if (tenders.length === 0) {
+      console.log('No tenders fetched from API. Falling back to database tenders.');
+      return; // If JSON fetch fails, we only use database tenders.
+    }
+
     // Iterate over the fetched tenders and insert them into the database
     for (const tender of tenders) {
       await Tender.updateOne(
