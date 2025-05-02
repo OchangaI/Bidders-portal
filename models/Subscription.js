@@ -8,7 +8,7 @@ const SubscriptionSchema = new mongoose.Schema({
   startDate: { type: Date, default: Date.now },
   endDate: { type: Date, required: true },
   isActive: { type: Boolean, default: true },
-  paymentRef: { type: String, required: true }, // Store Flutterwave transaction ID
+  // paymentRef: { type: String, required: true }, // Store Flutterwave transaction ID
 });
 
 export default mongoose.model("Subscription", SubscriptionSchema);

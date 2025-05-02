@@ -1,10 +1,12 @@
 import express from 'express';
 import Tender from '../models/Tender.js';
+import fetch from 'node-fetch';
 import {
   getTenders,
   createTender,
   updateTender,
   deleteTender,
+  // getFiltersData
 } from '../controllers/tenderController.js';
 
 const router = express.Router();
@@ -14,6 +16,9 @@ router.get('/', getTenders);
 router.post('/', createTender);
 router.put('/:id', updateTender);
 router.delete('/:id', deleteTender);
+// router.get("/filters", getFiltersData);
+
+
 // ✅ API to fetch all purchased tenders for a user
 router.get("/purchased", async (req, res) => {
   try {

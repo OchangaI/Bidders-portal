@@ -11,6 +11,8 @@ import axios from "axios";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import "./utils/cronJobs.js"; // Import the cron jobs
 import { sendDailyNotifications } from "./controllers/subscriptionController.js";
+import IntaSend from "intasend-node"; // Import IntaSend SDK
+import "./utils/dailyNotifier.js"; // place after your DB connection is ready
 
 // import notificationRoutes from "./routes/notificationRoutes.js";
 
@@ -19,8 +21,8 @@ import cron from "node-cron";
 
 dotenv.config(); // Load environment variables
 
-const router = express.Router();
 
+const router = express.Router();
 
 import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = 'https://cbdbitjcgjlvcezcnojh.supabase.co'
@@ -35,7 +37,8 @@ const allowedOrigins = [
   'http://localhost:3000',  // Frontend
   'http://localhost:5173',  // Admin Dashboard
   'https://biddersportal.com',  // Deployed Frontend
-  'https://admin.biddersportal.com'  // Deployed Admin Dashboard
+  'https://admin.biddersportal.com',  // Deployed Admin Dashboard
+  'https://fd18-129-222-187-197.ngrok-free.app',
 ];
 
 app.use(cors({
@@ -88,20 +91,32 @@ router.get('/admin/profile', async (req, res) => {
 // app.use(cors({ origin: "https://biddersportal.com" })); // Allow frontend only
 app.use(errorMiddleware);
 
+const intasend = new IntaSend({
+  publicAPIKey: process.env.INTASEND_PUBLIC_KEY,
+  privateAPIKey: process.env.INTASEND_SECRET_KEY,
+  test: false,
+});
+
+
 // ✅ Store payment when user pays
 app.post("/payment/success", async (req, res) => {
   try {
     const { userEmail, tenderRef } = req.body;
 
     if (!tenderRef || !userEmail) {
+      console.log("Missing fields:", { userEmail, tenderRef });
       return res.status(400).json({ message: "Missing payment details" });
-      console.log(res);
     }
+    
 
     const tender = await Tender.findOne({ BDR_No: Number(tenderRef) }); // ✅ Convert tenderRef to number
 
     if (!tender) {
       return res.status(404).json({ message: "Tender not found" });
+    }
+
+    if (!tender.FileUrl) {
+      return res.status(400).json({ message: "FileUrl is required for this tender." });
     }
 
     if (!tender.paidUsers.includes(userEmail)) {
@@ -110,44 +125,52 @@ app.post("/payment/success", async (req, res) => {
     }
 
     // ✅ Send Confirmation Email
-    const emailPayload = {
-      recipient: userEmail, // Email address
-      name: userEmail.split("@")[0], // Extract name from email
-      subject: "Tender Purchase Confirmation",
-      message: `
-          <h2>Congratulations! 🎉</h2>
-          <p>You have successfully purchased the tender:</p>
-          <strong>${tender.Tender_Brief}</strong>
-          <p>Country: ${tender.Country}</p>
-          <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
-          <p><a href="${tender.FileUrl}" target="_blank">Download Tender Document</a></p>
-          <p>Thank you for using our platform!</p>
-      `,
-  };
-  
+    // ✅ Send Confirmation Email
+// const tenderLinkMatch = tender.Work_Detail.match(/(https?:\/\/[^\s]+)/);
+// const tenderLink = tenderLinkMatch ? tenderLinkMatch[0] : "#"; // Fallback to "#" if no link is found
+
+// const emailPayload = {
+//   recipient: userEmail, // Email address
+//   name: userEmail.split("@")[0], // Extract name from email
+//   subject: "Tender Purchase Confirmation",
+//   message: `
+//       <h2>Congratulations! 🎉</h2>
+//       <p>You have successfully purchased the tender:</p>
+//       <strong>${tender.Tender_Brief}</strong>
+//       <p>Country: ${tender.Country}</p>
+//       <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
+//       <p>
+//         <a href="${tenderLink}" target="_blank" rel="noopener noreferrer">
+//           Download Tender Document
+//         </a>
+//       </p>
+//       <p>Thank you for using our platform!</p>
+//   `,
+// };
+
+const emailPayload = {
+  recipient: userEmail, // Email address
+  name: userEmail.split("@")[0], // Extract name from email
+  subject: "Tender Purchase Confirmation",
+  message: `
+      <h2>Congratulations! 🎉</h2>
+      <p>You have successfully purchased the tender:</p>
+      <strong>${tender.Tender_Brief}</strong>
+      <p>Country: ${tender.Country}</p>
+      <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
+      <p><a href="${tender.FileUrl}" target="_blank">Download Tender Document</a></p>
+      <p>Thank you for using our platform!</p>
+  `,
+};
+
+
   console.log("📩 Sending Email Payload:", emailPayload); // Log the payload
 
     // ✅ If this is a subscription payment, send a subscription confirmation email
     if (req.body.isSubscription) {
       const { userEmail, selectedCategories, selectedCountries, subscriptionType, endDate } = req.body;
 
-      const emailPayload = {
-          recipient: userEmail,
-          recipient_name: userEmail.split("@")[0], // Extract name
-          subject: "Subscription Confirmation",
-          message: `
-              <h2>Thank You for Subscribing! 🎉</h2>
-              <p>Your subscription details:</p>
-              <ul>
-                  <li><strong>Categories:</strong> ${selectedCategories.join(", ")}</li>
-                  <li><strong>Countries:</strong> ${selectedCountries.join(", ")}</li>
-                  <li><strong>Type:</strong> ${subscriptionType}</li>
-                  <li><strong>Valid Until:</strong> ${new Date(endDate).toDateString()}</li>
-              </ul>
-              <p>You will start receiving daily tender notifications matching your preferences.</p>
-              <p>Thank you for using our platform!</p>
-          `,
-      };
+      
 
       console.log("📩 Sending Subscription Email Payload:", emailPayload); // Log the payload
 
@@ -165,28 +188,6 @@ app.post("/payment/success", async (req, res) => {
           console.error("❌ Subscription Email Failed:", error.response?.data || error.message);
       }
   }
-
-// =======
-
-//     // ✅ Send Confirmation Email
-//     const emailPayload = {
-//       recipient: userEmail, // Email address
-//       name: userEmail.split("@")[0], // Extract name from email
-//       subject: "Tender Purchase Confirmation",
-//       message: `
-//           <h2>Congratulations! 🎉</h2>
-//           <p>You have successfully purchased the tender:</p>
-//           <strong>${tender.Tender_Brief}</strong>
-//           <p>Country: ${tender.Country}</p>
-//           <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
-//           <p><a href="${tender.FileUrl}" target="_blank">Download Tender Document</a></p>
-//           <p>Thank you for using our platform!</p>
-//       `,
-//   };
-  
-//   console.log("📩 Sending Email Payload:", emailPayload); // Log the payload
-// >>>>>>> ffb1673 (adding email forwarding)
-  
   try {
       const emailResponse = await axios.post(
           "https://hazi.co.ke/api/v3/email/send",
@@ -200,9 +201,6 @@ app.post("/payment/success", async (req, res) => {
   } catch (error) {
       console.error("❌ Email sending failed:", error.response?.data || error.message);
   }
-  
-  
-
     res.json({ message: "Payment recorded & email sent", tenderRef });
   } catch (error) {
     console.error("❌ Error processing payment:", error.message);
@@ -210,17 +208,44 @@ app.post("/payment/success", async (req, res) => {
   }
 });
 
+router.get("/files/*", async (req, res) => {
+  try {
+    let filePath = req.params[0]; // Extract the full path after `/files/`
+
+    // ✅ Construct the original file URL
+    const originalFileUrl = `https://www.biddetail.co.in/GlobalTenderDocuments/${filePath}`;
+
+    console.log(`📂 Fetching file from: ${originalFileUrl}`);
+
+    const response = await fetch(originalFileUrl);
+    if (!response.ok) {
+      console.log("❌ File fetch failed:", response.status);
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    const buffer = await response.arrayBuffer();
+    console.log("✅ File fetched, size:", buffer.byteLength);
+
+    res.setHeader("Content-Disposition", `attachment; filename="Tender_${filePath.split('/').pop()}"`);
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error("❌ Error fetching file:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 // ✅ API to fetch a tender by BDR_No
 app.get("/tenders/:tenderRef", async (req, res) => {
   try {
-    let { userEmail } = req.query; // Get email from query params
-    const tenderRef = Number(req.params.tenderRef); // Convert to number
+    let { userEmail } = req.query; 
+    const tenderRef = Number(req.params.tenderRef);
 
     if (!userEmail) {
       return res.status(400).json({ message: "User email is required" });
     }
 
-    userEmail = decodeURIComponent(userEmail); // ✅ Decode URL-encoded email
+    userEmail = decodeURIComponent(userEmail);
 
     const tender = await Tender.findOne({ BDR_No: tenderRef });
 
@@ -232,7 +257,21 @@ app.get("/tenders/:tenderRef", async (req, res) => {
       return res.status(403).json({ message: "Access denied. Please pay first." });
     }
 
-    res.json(tender);
+    // ✅ Normalize FileUrl (replace `\\` with `/`)
+    let filePath = tender.FileUrl.replace(/\\/g, "/");
+
+    // ✅ Remove domain part & ensure no double slashes
+    filePath = filePath.replace(/^https?:\/\/www\.biddetail\.co\.in\/GlobalTenderDocuments\//, "");
+
+    // ✅ Construct the masked URL
+    const maskedFileUrl = `/files/${filePath}`.replace(/\/+/g, "/");
+
+    const maskedTender = {
+      ...tender.toObject(),
+      FileUrl: maskedFileUrl, // ✅ Send the masked URL
+    };
+
+    res.json(maskedTender);
   } catch (error) {
     console.error("❌ Error fetching tender:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
@@ -250,6 +289,7 @@ import membershipRoutes from "./routes/membershipRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import biddingAssistanceRoutes from "./routes/biddingAssistanceRoutes.js";
 // app.use(cors({ origin: process.env.FRONTEND_URL }));
+import notificationRoutes from "./routes/notificationRoutes.js";
 import statsRoutes from "./routes/stats.js";
 
 app.use("/api", statsRoutes);
@@ -259,21 +299,18 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paypalRoutes);
 app.use("/api/membership", membershipRoutes);
 app.use("/api/prequalification", preQualificationRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/bidding-assistance", biddingAssistanceRoutes);
 // app.use("/api/tenders/purchased", purchasedTendersRoutes);
-
-
-app.use(cors({ origin: process.env.FRONTEND_URL }));
-
 app.use("/api/auth", authRoutes);
 app.use("/api/tenders", tenderRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/payments", paypalRoutes);
+// app.use("/api/payments", paypalRoutes);
 // app.use("/api/notifications", notificationRoutes);
-app.use("/api/notifications", subscriptionRoutes);
-app.use("/api/prequalification", preQualificationRoutes);
+// app.use("/api/notifications", subscriptionRoutes);
+// app.use("/api/prequalification", preQualificationRoutes);
 
 // ✅ Schedule the tender import to run every 24 hours (midnight)
 cron.schedule("0 0 * * *", async () => {
@@ -308,3 +345,4 @@ const startServer = async () => {
 };
 
 startServer();
+               

@@ -1,34 +1,24 @@
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  service: "gmail", // Change if using a different provider
-  auth: {
-    user: process.env.EMAIL_USER, // Ensure this is set in your environment variables
-    pass: process.env.EMAIL_PASS, // Ensure this is set in your environment variables
-  },
-});
-
-/**
- * @desc Send an email
- * @param {string} recipient - Recipient email address
- * @param {string} subject - Email subject
- * @param {string} content - Email body (HTML supported)
- * @returns {Promise<void>}
- */
-const sendEmail = async (recipient, subject, content) => {
+export const sendEmail = async (to, subject, html) => {
   try {
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: recipient,
-      subject,
-      html: content, // HTML content support
-    };
+    const response = await axios.post(
+      "https://hazi.co.ke/api/v3/email/send",
+      {
+        to,
+        subject,
+        html,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.YOUR_HAZI_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${recipient}: ${subject}`);
+    console.log(`✅ Hazi email sent to ${to}: ${subject}`);
+    return response.data;
   } catch (error) {
-    console.error("Error sending email:", error.message);
+    console.error("❌ Hazi email error:", error.response?.data || error.message);
+    throw error; // Let the caller catch and handle
   }
 };
-
-export default sendEmail;

@@ -1,32 +1,63 @@
 import Tender from '../models/Tender.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import cron from 'node-cron';
 
 dotenv.config();
 
 // URL of the tender API
-const tenderApiUrl = process.env.TENDER_API_URL;
+// const tenderApiUrl = process.env.TENDER_API_URL;
 
-// Fetch tenders from the provided API URL
+// // Fetch tenders from the provided API URL
+// const fetchTendersFromApi = async () => {
+//   try {
+//     const response = await axios.get(tenderApiUrl);
+//     // Extract tender details from the response
+//     const tenders = response.data.TenderDetails.flatMap(item => item.TenderLists || []);
+//     return tenders;
+//   } catch (error) {
+//     console.error('Error fetching tenders from API:', error);
+//     return [];
+//   }
+// };
+import fs from 'fs/promises'; // Use promises for async file handling
+
+const jsonFilePath = '../tenders.json'; // Update the path if needed
+
 const fetchTendersFromApi = async () => {
   try {
-    const response = await axios.get(tenderApiUrl);
-    // Extract tender details from the response
-    const tenders = response.data.TenderDetails.flatMap(item => item.TenderLists || []);
+    // Read the JSON file
+    const data = await fs.readFile(jsonFilePath, 'utf-8');
+
+    // Parse the JSON
+    const tendersData = JSON.parse(data);
+
+    // Extract tenders
+    const tenders = tendersData.TenderDetails.flatMap(item => item.TenderLists || []);
+    
     return tenders;
   } catch (error) {
-    console.error('Error fetching tenders from API:', error);
+    console.error('Error fetching tenders from JSON file:', error);
     return [];
   }
 };
 
+// Example usage
+// fetchTendersFromJson().then(tenders => console.log(tenders));
+
+
 // Load tenders from the API and populate the database
 export const loadInitialData = async () => {
   try {
-    // Fetch tenders from the API
+    // Try fetching from JSON
     const tenders = await fetchTendersFromApi();
 
-    // Iterate over the fetched tenders and insert them into the database
+    if (tenders.length === 0) {
+      console.log('No tenders found in JSON file. Falling back to database tenders.');
+      return; // If JSON fetch fails, we only use database tenders.
+    }
+
+    // Save to database
     for (const tender of tenders) {
       await Tender.updateOne(
         { BDR_No: tender.BDR_No }, // Use BDR_No as a unique identifier
@@ -35,11 +66,19 @@ export const loadInitialData = async () => {
       );
     }
 
-    console.log('Tenders data loaded from the API into the database.');
+    console.log('Tenders data loaded from the JSON file into the database.');
   } catch (error) {
-    console.error('Failed to load tenders from the API:', error);
+    console.error('Failed to load tenders from the JSON file:', error);
   }
 };
+
+
+// Load tenders every 30 minutes
+// cron.schedule('*/30 * * * *', async () => {
+//   console.log('Refreshing tenders...');
+//   await loadInitialData();
+// });
+
 
 // Get all tenders with optional filters
 export const getTenders = async (req, res) => {

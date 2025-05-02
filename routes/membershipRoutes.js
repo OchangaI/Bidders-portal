@@ -11,7 +11,7 @@ import Membership from '../models/Membership.js';
 
 const router = express.Router();
 
-router.post('/membership/register', registerMembership);
+router.post('/register', registerMembership);
 router.get('/membership/all', getAllMembers);
 router.get('/membership/status/:email', checkMembershipStatus);
 router.get('membership/:id', getMemberById);

@@ -1,16 +1,17 @@
 import BiddingAssistance from "../models/BiddingAssistance.js";
 import axios from "axios";
 import dotenv from "dotenv";
-dotenv.config();
+import IntaSend from "intasend-node"; // Import IntaSend SDK
+
+// Initialize IntaSend with your API keys
+// const intasend = new IntaSend(process.env.INTASEND_SECRET_KEY, process.env.INTASEND_PUBLIC_KEY);
 
 /**
- * Email Setup
+ * Send Confirmation Email using HAZI
  */
-
-
-const sendConfirmationEmail = async (email, name, details) => {
+export const sendConfirmationEmail = async (email, name, details) => {
   try {
-    const response = await axios.post(
+    await axios.post(
       "https://hazi.co.ke/api/v3/email/send",
       {
         recipient: email,
@@ -20,99 +21,81 @@ const sendConfirmationEmail = async (email, name, details) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.HAZI_API_KEY}`, // Use your HAZI API token
+          Authorization: `Bearer ${process.env.HAZI_API_KEY}`,
           "Content-Type": "application/json",
         },
       }
     );
-
-    if (response.data.status === "success") {
-      console.log("Confirmation email sent to", email);
-    } else {
-      console.error("Failed to send confirmation email via HAZI:", response.data);
-    }
+    console.log("Confirmation email sent to", email);
   } catch (error) {
-    console.error("Error sending confirmation email via HAZI:", error.response?.data || error.message);
+    console.error("Error sending confirmation email:", error.response?.data || error.message);
   }
 };
 
-/**
- * Initiate Flutterwave Payment
- */
-/**
- * Initiate Flutterwave Payment
- */
-export const initiatePayment = async (req, res) => {
+// /**
+//  * Initialize Payment with IntaSend
+//  */
+export const initializePayment = async (req, res) => {
   try {
     const { name, email, details, amount, currency } = req.body;
-    const tx_ref = `BA_${Date.now()}`;
 
-    const paymentData = {
-      tx_ref,
+    if (!email || !amount || !currency) {
+      return res.status(400).json({ success: false, message: "Missing payment details" });
+    }
+
+    // Initialize Payment via IntaSend
+    const paymentResponse = await IntaSend.payment.initialize({
+      email,
       amount,
       currency,
-      redirect_url: `https://biddersportal.com/payment-success?tx_ref=${tx_ref}&email=${email}&name=${name}&details=${encodeURIComponent(details)}`,
-      // redirect_url: `http://localhost:3000/payment-success?tx_ref=${tx_ref}&email=${email}&name=${name}&details=${encodeURIComponent(details)}`,
-      customer: { email, name },
-      customizations: { title: "Bidding Assistance Payment" },
-    };
-
-    const response = await axios.post("https://api.flutterwave.com/v3/payments", paymentData, {
-      headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` },
+      callback_url: 'http://localhost:5000/payment-success',
     });
 
-    if (response.data.status === "success") {
-      res.json({ success: true, paymentLink: response.data.data.link });
+    console.log("Payment Initialized:", paymentResponse);
+
+    if (paymentResponse.checkout_url) {
+      res.json({ success: true, checkout_url: paymentResponse.checkout_url });
     } else {
-      res.status(400).json({ success: false, message: "Payment initiation failed" });
+      res.status(500).json({ success: false, message: "Failed to initialize payment" });
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error initiating payment", error: error.message });
+    console.error("IntaSend Payment Error:", error.message);
+    res.status(500).json({ success: false, message: "Payment initialization failed", error: error.message });
   }
 };
 
 /**
- * Verify Flutterwave Payment & Create Request
+ * Handle Payment Confirmation (Webhook)
  */
-export const verifyPayment = async (req, res) => {
-  const { tx_ref, transaction_id, email, name, details } = req.query;
-
-  if (!transaction_id) {
-    return res.status(400).json({ success: false, message: "Transaction ID is missing" });
-  }
-
+export const confirmPayment = async (req, res) => {
   try {
-    console.log("🔍 Received query params:", req.query);
+    const { transaction_id, status, email, amount, currency } = req.body;
 
-    const response = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
-      headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` },
-    });
+    if (status === "SUCCESS") {
+      const existingRequest = await BiddingAssistance.findOne({ transactionId: transaction_id });
 
-    console.log("🌍 Flutterwave Response:", response.data);
+      if (!existingRequest) {
+        const newRequest = new BiddingAssistance({
+          name: req.body.name || "Unknown",
+          email,
+          details: req.body.details || "No details provided",
+          amountPaid: amount,
+          currency,
+          transactionId: transaction_id,
+          paymentStatus: "successful",
+        });
 
-    if (response.data.status === "success" && response.data.data.status === "successful") {
-      const newRequest = new BiddingAssistance({
-        name,
-        email,
-        details,
-        amountPaid: response.data.data.amount,
-        currency: response.data.data.currency,
-        transactionId: transaction_id,
-        paymentStatus: "successful",
-      });
+        await newRequest.save();
+        await sendConfirmationEmail(email, req.body.name, req.body.details);
+      }
 
-      await newRequest.save();
-      await sendConfirmationEmail(email, name, details);
-
-      return res.redirect("https://biddersportal.com/payment-success?status=success");
-      // return res.redirect("http://localhost:3000/payment-success?status=success");
-    } else {
-      return res.redirect("https://biddersportal.com/payment-success?status=failed");
-      // return res.redirect("http://localhost:3000/payment-success?status=failed");
+      return res.json({ success: true, message: "Payment confirmed" });
     }
+
+    res.status(400).json({ success: false, message: "Payment not successful" });
   } catch (error) {
-    console.error("🚨 Error verifying payment:", error.response?.data || error.message);
-    return res.status(500).json({ success: false, message: "Error verifying payment", error: error.message });
+    console.error("Payment Confirmation Error:", error.message);
+    res.status(500).json({ success: false, message: "Payment confirmation failed", error: error.message });
   }
 };
 
@@ -147,9 +130,8 @@ export const deleteRequest = async (req, res) => {
   }
 };
 
-
 /**
- * Get all bidding assistance requests (For admin)
+ * Get all Bidding Assistance Requests (For Admin)
  */
 export const getRequests = async (req, res) => {
   try {
@@ -161,7 +143,7 @@ export const getRequests = async (req, res) => {
 };
 
 /**
- * Respond to a bidding assistance request
+ * Respond to a Bidding Assistance Request
  */
 export const respondToRequest = async (req, res) => {
   try {
@@ -179,9 +161,8 @@ export const respondToRequest = async (req, res) => {
 };
 
 /**
- * Send reply to user
+ * Send Reply to User
  */
-
 export const sendReply = async (req, res) => {
   const { email, name, message } = req.body;
 
@@ -200,7 +181,7 @@ export const sendReply = async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.HAZI_API_KEY}`, // Store API token in .env
+          Authorization: `Bearer ${process.env.HAZI_API_KEY}`,
           "Content-Type": "application/json",
         },
       }

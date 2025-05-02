@@ -35,7 +35,6 @@ const sendDailyNotifications = async () => {
         .join("");
 
       // ✅ Send email notification
-<<<<<<< HEAD
       await sendEmail(userEmail, "Daily Tender Notifications", `<h2>New Tenders Matching Your Preferences</h2>${tenderListHTML}<p>Thank you for using our platform!</p>`);
 
       //   {
@@ -48,7 +47,6 @@ const sendDailyNotifications = async () => {
       //     headers: { Authorization: `Bearer ${process.env.HAZI_API_TOKEN}` },
       //   }
       // );
-=======
       await axios.post(
         "https://hazi.co.ke/api/v3/email/send",
         {
@@ -61,7 +59,6 @@ const sendDailyNotifications = async () => {
           headers: { Authorization: `Bearer ${process.env.HAZI_API_TOKEN}` },
         }
       );
->>>>>>> ffb1673 (adding email forwarding)
 
       console.log(`Notification sent to ${userEmail}`);
     }

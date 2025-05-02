@@ -29,6 +29,10 @@ export const registerMembership = async (req, res) => {
     });
 
     await newMembership.save();
+    console.log(`New membership registered:`, newMembership);
+    
+    // 📩 Send email after saving
+    await sendMembershipConfirmationEmail({ email, name, subscriptionType, endDate });
     res.status(201).json({ message: 'Membership registered successfully', membership: newMembership });
 
     console.log(`New membership registered:`, newMembership);
@@ -37,6 +41,59 @@ export const registerMembership = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+const sendMembershipConfirmationEmail = async ({ email, name, subscriptionType, endDate }) => {
+  try {
+    const subject = "🎉 Welcome to Our Membership Program!";
+    
+    // HTML Message
+    const message = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #4CAF50;">Welcome, ${name}!</h2>
+        <p>Congratulations! Your membership has been successfully activated. 🎉</p>
+
+        <h3>Membership Details:</h3>
+        <ul>
+          <li><strong>Type:</strong> ${subscriptionType === 'monthly' ? 'Monthly Membership' : 'Yearly Membership'}</li>
+          <li><strong>Valid Until:</strong> ${endDate.toDateString()}</li>
+        </ul>
+
+        <h3>What to Expect Next:</h3>
+        <ul>
+          <li>✅ Daily tender notifications delivered to your email.</li>
+          <li>✅ Exclusive member-only opportunities and resources.</li>
+          <li>✅ Priority support and latest updates.</li>
+        </ul>
+
+        <p>We are excited to have you on board and look forward to helping you discover new opportunities!</p>
+
+        <p style="margin-top: 30px;">Cheers,<br><strong>The Bidders Portal Team</strong></p>
+
+        <hr style="margin-top: 40px; border: none; border-top: 1px solid #eee;" />
+        <small style="color: #999;">If you have any questions, feel free to reply to this email or contact our support team.</small>
+      </div>
+    `;
+
+    // Using your email API (example with Hazi.co.ke API)
+    await axios.post('https://hazi.co.ke/api/v3/email/send', {
+      to: email,
+      subject,
+      message,
+      from: "info@biddersportal.com", // Replace with your verified sender
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.HAZI_API_KEY}`, // Replace with your actual API key
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log(`Confirmation email sent to ${email}`);
+  } catch (error) {
+    console.error('Failed to send confirmation email:', error.message);
+    // Don't throw error so membership saving continues
+  }
+};
+
 
 
 // Get all members

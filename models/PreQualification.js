@@ -16,7 +16,7 @@ const PreQualificationSchema = new mongoose.Schema(
     amountPaid: { type: Number, required: true },
     currency: { type: String, required: true },
     paymentStatus: { type: String, enum: ["Pending", "Paid"], default: "Pending" },
-    transactionId: { type: String },
+    // transactionId: { type: String },
   },
   { timestamps: true }
 );

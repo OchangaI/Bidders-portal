@@ -20,14 +20,14 @@ cron.schedule("0 8 * * *", async () => {
       });
 
       if (tenders.length > 0) {
-        const tenderList = tenders.map(t => `🔹 ${t.Tender_Title} - ${t.Country}`).join("\n");
+        const tenderList = tenders.map(t => `🔹 ${t.Tender_Brief} - ${t.Country}`).join("\n");
 
         const emailBody = `
           <h3>Daily Tender Notifications</h3>
           <p>Hello,</p>
           <p>Here are the latest tenders matching your preferences:</p>
           <ul>
-            ${tenders.map(t => `<li><strong>${t.Tender_Title}</strong> - ${t.Country}</li>`).join("")}
+            ${tenders.map(t => `<li><strong>${t.Tender_Brief}</strong> - ${t.Country}</li>`).join("")}
           </ul>
           <p>Visit our website to view more details.</p>
           <p>Thank you!</p>
