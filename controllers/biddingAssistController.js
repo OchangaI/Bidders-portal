@@ -147,9 +147,10 @@ export const verifyPayment = async (req, res) => {
       await newRequest.save();
       await sendConfirmationEmail(email, name, details);
 
-      return res.redirect("https://biddersportal.com/payment-success?status=success");
+      return res.redirect("http://localhost:3000/payment-success?status=success");
+      // return res.redirect("https://biddersportal.com/payment-success?status=success");
     } else {
-      return res.redirect("https://biddersportal.com/payment-success?status=failed");
+      return res.redirect("http://localhost:3000/payment-success?status=failed");
     }
   } catch (error) {
     console.error("🚨 Error verifying payment:", error.response?.data || error.message);

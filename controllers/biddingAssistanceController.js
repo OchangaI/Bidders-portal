@@ -48,7 +48,8 @@ export const initializePayment = async (req, res) => {
       email,
       amount,
       currency,
-      callback_url: 'http://localhost:5000/payment-success',
+      callback_url: 'https://biddersportal.com/payment-success',
+      // callback_url: 'http://localhost:5000/payment-success',
     });
 
     console.log("Payment Initialized:", paymentResponse);
