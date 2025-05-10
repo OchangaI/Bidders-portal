@@ -22,7 +22,10 @@ dotenv.config();
 // };
 import fs from 'fs/promises'; // Use promises for async file handling
 
-const jsonFilePath = '../tenders.json'; // Update the path if needed
+// const jsonFilePath = '../tenders.json'; // Update the path if needed
+import path from 'path';
+const jsonFilePath = path.resolve('tenders.json'); // Make sure tenders.json is in root
+
 
 const fetchTendersFromApi = async () => {
   try {
@@ -41,6 +44,8 @@ const fetchTendersFromApi = async () => {
     return [];
   }
 };
+
+
 
 // Example usage
 // fetchTendersFromJson().then(tenders => console.log(tenders));
@@ -100,6 +105,18 @@ export const getTenders = async (req, res) => {
     res.status(500).json({ message: 'Error fetching tenders.', error });
   }
 };
+
+export const getAllTenders = async (req, res) => {
+  try {
+    const tenders = await Tender.find(); // If fetching from DB
+    // OR
+    // const tenders = await fetchTendersFromApi();
+    res.status(200).json(tenders);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch tenders' });
+  }
+};
+
 
 // Create a new tender
 export const createTender = async (req, res) => {

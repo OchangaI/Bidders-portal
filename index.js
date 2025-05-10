@@ -324,6 +324,21 @@ cron.schedule("0 8 * * *", () => {
   sendDailyNotifications();
 });
 
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve static files from the frontend build folder
+app.use(express.static(path.join(__dirname, 'client', 'build'))); // or 'frontend' if that's your folder
+
+// Fallback route for client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
+});
+
+
 
 // ✅ Database Connection and Server Start
 const startServer = async () => {
