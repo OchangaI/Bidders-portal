@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const TenderSchema = new mongoose.Schema(
   {
+    _id: {
+    type: String, // Instead of default ObjectId
+    required: true
+    },
     BDR_No: { type: Number, required: true },
     Tender_No: { type: String, default: '' },
     Tender_Brief: { type: String, required: true },
@@ -17,6 +21,7 @@ const TenderSchema = new mongoose.Schema(
     Email_Address: { type: String, default: '' },
     Mobile_Contacts: { type: String, default: '' },
     FileUrl: { type: String, required: true },
+    EntryDate: { type: Date, required: true },
     EntryDate: { type: Date, required: true },
     TUID: { type: String, required: true },
     paidUsers: [String] // Array to store emails of paid users

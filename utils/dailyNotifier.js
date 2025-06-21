@@ -52,14 +52,14 @@ const sendDailyNotifications = async () => {
       });
     }
 
-    console.log("✅ Daily notifications sent.");
+    console.log(`✅ Daily notifications sent. ${subscribers.length} users notified.`);
   } catch (err) {
     console.error("❌ Error sending daily notifications:", err.message);
   }
 };
 
 // Run every day at 8 AM
-cron.schedule("0 12 * * *", () => {
+cron.schedule("0 13 * * *", () => {
   console.log("🚀 Running daily tender notification job...");
   sendDailyNotifications();
 });

@@ -115,14 +115,26 @@ app.post("/payment/success", async (req, res) => {
       return res.status(404).json({ message: "Tender not found" });
     }
 
-    if (!tender.FileUrl) {
+    // Remove any restriction/configuration specific to biddetail tenders
+    // Only check that FileUrl exists and is a non-empty string for all tenders
+    // Debug log to inspect the tender object and FileUrl
+    console.log('Tender found for purchase:', tender);
+    // console.log('FileUrl value:', tender.FileUrl, 'Type:', typeof tender.FileUrl);
+    if (!tender.FileUrl || typeof tender.FileUrl !== 'string' || !tender.FileUrl.trim()) {
       return res.status(400).json({ message: "FileUrl is required for this tender." });
     }
 
+    // if (!tender.paidUsers.includes(userEmail)) {
+    //   tender.paidUsers.push(userEmail);
+    //   await tender.save();
+    // }
+
     if (!tender.paidUsers.includes(userEmail)) {
-      tender.paidUsers.push(userEmail);
-      await tender.save();
-    }
+  await Tender.updateOne(
+    { _id: tender._id },
+    { $addToSet: { paidUsers: userEmail } }
+  );
+}
 
     // ✅ Send Confirmation Email
     // ✅ Send Confirmation Email
@@ -236,6 +248,48 @@ router.get("/files/*", async (req, res) => {
 });
 
 // ✅ API to fetch a tender by BDR_No
+// app.get("/tenders/:tenderRef", async (req, res) => {
+//   try {
+//     let { userEmail } = req.query; 
+//     const tenderRef = Number(req.params.tenderRef);
+
+//     if (!userEmail) {
+//       return res.status(400).json({ message: "User email is required" });
+//     }
+
+//     userEmail = decodeURIComponent(userEmail);
+
+//     const tender = await Tender.findOne({ BDR_No: tenderRef });
+
+//     if (!tender) {
+//       return res.status(404).json({ message: "Tender not found" });
+//     }
+
+//     if (!tender.paidUsers.includes(userEmail)) {
+//       return res.status(403).json({ message: "Access denied. Please pay first." });
+//     }
+
+//     // ✅ Normalize FileUrl (replace `\\` with `/`)
+//     let filePath = tender.FileUrl.replace(/\\/g, "/");
+
+//     // ✅ Remove domain part & ensure no double slashes
+//     filePath = filePath.replace(/^https?:\/\/www\.biddetail\.co\.in\/GlobalTenderDocuments\//, "");
+
+//     // ✅ Construct the masked URL
+//     const maskedFileUrl = `/files/${filePath}`.replace(/\/+/g, "/");
+
+//     const maskedTender = {
+//       ...tender.toObject(),
+//       FileUrl: maskedFileUrl, // ✅ Send the masked URL
+//     };
+
+//     res.json(maskedTender);
+//   } catch (error) {
+//     console.error("❌ Error fetching tender:", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// });
+// ✅ API to fetch a tender by BDR_No
 app.get("/tenders/:tenderRef", async (req, res) => {
   try {
     let { userEmail } = req.query; 
@@ -247,36 +301,32 @@ app.get("/tenders/:tenderRef", async (req, res) => {
 
     userEmail = decodeURIComponent(userEmail);
 
+    console.log('GET /tenders/:tenderRef', { tenderRef, userEmail });
     const tender = await Tender.findOne({ BDR_No: tenderRef });
+    console.log('Tender found:', tender);
 
     if (!tender) {
       return res.status(404).json({ message: "Tender not found" });
     }
 
     if (!tender.paidUsers.includes(userEmail)) {
+      console.log('User not in paidUsers:', { paidUsers: tender.paidUsers, userEmail });
       return res.status(403).json({ message: "Access denied. Please pay first." });
     }
 
-    // ✅ Normalize FileUrl (replace `\\` with `/`)
-    let filePath = tender.FileUrl.replace(/\\/g, "/");
-
-    // ✅ Remove domain part & ensure no double slashes
-    filePath = filePath.replace(/^https?:\/\/www\.biddetail\.co\.in\/GlobalTenderDocuments\//, "");
-
-    // ✅ Construct the masked URL
-    const maskedFileUrl = `/files/${filePath}`.replace(/\/+/g, "/");
-
-    const maskedTender = {
+    // Do not mask any URL, just return the original FileUrl
+    const tenderData = {
       ...tender.toObject(),
-      FileUrl: maskedFileUrl, // ✅ Send the masked URL
+      FileUrl: tender.FileUrl,
     };
 
-    res.json(maskedTender);
+    res.json(tenderData);
   } catch (error) {
     console.error("❌ Error fetching tender:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+// ...existing code...
 
 
 // API routes
@@ -360,4 +410,3 @@ const startServer = async () => {
 };
 
 startServer();
-               

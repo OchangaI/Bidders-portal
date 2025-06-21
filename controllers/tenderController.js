@@ -6,20 +6,7 @@ import cron from 'node-cron';
 dotenv.config();
 
 // URL of the tender API
-// const tenderApiUrl = process.env.TENDER_API_URL;
 
-// // Fetch tenders from the provided API URL
-// const fetchTendersFromApi = async () => {
-//   try {
-//     const response = await axios.get(tenderApiUrl);
-//     // Extract tender details from the response
-//     const tenders = response.data.TenderDetails.flatMap(item => item.TenderLists || []);
-//     return tenders;
-//   } catch (error) {
-//     console.error('Error fetching tenders from API:', error);
-//     return [];
-//   }
-// };
 import fs from 'fs/promises'; // Use promises for async file handling
 
 // const jsonFilePath = '../tenders.json'; // Update the path if needed
