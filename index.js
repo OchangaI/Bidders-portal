@@ -101,79 +101,51 @@ const intasend = new IntaSend({
 // ✅ Store payment when user pays
 app.post("/payment/success", async (req, res) => {
   try {
-    const { userEmail, tenderRef } = req.body;
+    let { userEmail, tenderRef } = req.body;
+    userEmail = userEmail.trim().toLowerCase();
 
     if (!tenderRef || !userEmail) {
       console.log("Missing fields:", { userEmail, tenderRef });
       return res.status(400).json({ message: "Missing payment details" });
     }
-    
 
-    const tender = await Tender.findOne({ BDR_No: Number(tenderRef) }); // ✅ Convert tenderRef to number
+    // Match both string and number BDR_No
+    const tender = await Tender.findOne({
+      $or: [
+        { BDR_No: Number(tenderRef) },
+        { BDR_No: tenderRef }
+      ]
+    });
 
     if (!tender) {
       return res.status(404).json({ message: "Tender not found" });
     }
 
-    // Remove any restriction/configuration specific to biddetail tenders
-    // Only check that FileUrl exists and is a non-empty string for all tenders
-    // Debug log to inspect the tender object and FileUrl
-    console.log('Tender found for purchase:', tender);
-    // console.log('FileUrl value:', tender.FileUrl, 'Type:', typeof tender.FileUrl);
-    if (!tender.FileUrl || typeof tender.FileUrl !== 'string' || !tender.FileUrl.trim()) {
-      return res.status(400).json({ message: "FileUrl is required for this tender." });
+    // Normalize all emails for comparison
+    const paidUsersNormalized = (tender.paidUsers || []).map(e => e.trim().toLowerCase());
+    if (!paidUsersNormalized.includes(userEmail)) {
+      await Tender.updateOne(
+        // { _id: tender._id },
+        { BDR_No: tender.BDR_No },
+        { $addToSet: { paidUsers: userEmail } }
+      );
     }
 
-    // if (!tender.paidUsers.includes(userEmail)) {
-    //   tender.paidUsers.push(userEmail);
-    //   await tender.save();
-    // }
-
-    if (!tender.paidUsers.includes(userEmail)) {
-  await Tender.updateOne(
-    { _id: tender._id },
-    { $addToSet: { paidUsers: userEmail } }
-  );
-}
-
     // ✅ Send Confirmation Email
-    // ✅ Send Confirmation Email
-// const tenderLinkMatch = tender.Work_Detail.match(/(https?:\/\/[^\s]+)/);
-// const tenderLink = tenderLinkMatch ? tenderLinkMatch[0] : "#"; // Fallback to "#" if no link is found
-
-// const emailPayload = {
-//   recipient: userEmail, // Email address
-//   name: userEmail.split("@")[0], // Extract name from email
-//   subject: "Tender Purchase Confirmation",
-//   message: `
-//       <h2>Congratulations! 🎉</h2>
-//       <p>You have successfully purchased the tender:</p>
-//       <strong>${tender.Tender_Brief}</strong>
-//       <p>Country: ${tender.Country}</p>
-//       <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
-//       <p>
-//         <a href="${tenderLink}" target="_blank" rel="noopener noreferrer">
-//           Download Tender Document
-//         </a>
-//       </p>
-//       <p>Thank you for using our platform!</p>
-//   `,
-// };
-
-const emailPayload = {
-  recipient: userEmail, // Email address
-  name: userEmail.split("@")[0], // Extract name from email
-  subject: "Tender Purchase Confirmation",
-  message: `
-      <h2>Congratulations! 🎉</h2>
-      <p>You have successfully purchased the tender:</p>
-      <strong>${tender.Tender_Brief}</strong>
-      <p>Country: ${tender.Country}</p>
-      <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
-      <p><a href="${tender.FileUrl}" target="_blank">Download Tender Document</a></p>
-      <p>Thank you for using our platform!</p>
-  `,
-};
+    const emailPayload = {
+      recipient: userEmail, // Email address
+      name: userEmail.split("@")[0], // Extract name from email
+      subject: "Tender Purchase Confirmation",
+      message: `
+          <h2>Congratulations! 🎉</h2>
+          <p>You have successfully purchased the tender:</p>
+          <strong>${tender.Tender_Brief}</strong>
+          <p>Country: ${tender.Country}</p>
+          <p>Expiry Date: ${new Date(tender.Tender_Expiry).toDateString()}</p>
+          <p><a href="${tender.FileUrl}" target="_blank">Download Tender Document</a></p>
+          <p>Thank you for using our platform!</p>
+      `,
+    };
 
 
   console.log("📩 Sending Email Payload:", emailPayload); // Log the payload
@@ -248,73 +220,35 @@ router.get("/files/*", async (req, res) => {
 });
 
 // ✅ API to fetch a tender by BDR_No
-// app.get("/tenders/:tenderRef", async (req, res) => {
-//   try {
-//     let { userEmail } = req.query; 
-//     const tenderRef = Number(req.params.tenderRef);
-
-//     if (!userEmail) {
-//       return res.status(400).json({ message: "User email is required" });
-//     }
-
-//     userEmail = decodeURIComponent(userEmail);
-
-//     const tender = await Tender.findOne({ BDR_No: tenderRef });
-
-//     if (!tender) {
-//       return res.status(404).json({ message: "Tender not found" });
-//     }
-
-//     if (!tender.paidUsers.includes(userEmail)) {
-//       return res.status(403).json({ message: "Access denied. Please pay first." });
-//     }
-
-//     // ✅ Normalize FileUrl (replace `\\` with `/`)
-//     let filePath = tender.FileUrl.replace(/\\/g, "/");
-
-//     // ✅ Remove domain part & ensure no double slashes
-//     filePath = filePath.replace(/^https?:\/\/www\.biddetail\.co\.in\/GlobalTenderDocuments\//, "");
-
-//     // ✅ Construct the masked URL
-//     const maskedFileUrl = `/files/${filePath}`.replace(/\/+/g, "/");
-
-//     const maskedTender = {
-//       ...tender.toObject(),
-//       FileUrl: maskedFileUrl, // ✅ Send the masked URL
-//     };
-
-//     res.json(maskedTender);
-//   } catch (error) {
-//     console.error("❌ Error fetching tender:", error.message);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// });
-// ✅ API to fetch a tender by BDR_No
 app.get("/tenders/:tenderRef", async (req, res) => {
   try {
-    let { userEmail } = req.query; 
-    const tenderRef = Number(req.params.tenderRef);
+    let { userEmail } = req.query;
+    const tenderRef = req.params.tenderRef;
 
     if (!userEmail) {
       return res.status(400).json({ message: "User email is required" });
     }
 
-    userEmail = decodeURIComponent(userEmail);
+    userEmail = decodeURIComponent(userEmail).trim().toLowerCase();
 
-    console.log('GET /tenders/:tenderRef', { tenderRef, userEmail });
-    const tender = await Tender.findOne({ BDR_No: tenderRef });
-    console.log('Tender found:', tender);
+    // Match both string and number BDR_No
+    const tender = await Tender.findOne({
+      $or: [
+        { BDR_No: Number(tenderRef) },
+        { BDR_No: tenderRef }
+      ]
+    });
 
     if (!tender) {
       return res.status(404).json({ message: "Tender not found" });
     }
 
-    if (!tender.paidUsers.includes(userEmail)) {
-      console.log('User not in paidUsers:', { paidUsers: tender.paidUsers, userEmail });
+    // Normalize all emails for comparison
+    const paidUsersNormalized = (tender.paidUsers || []).map(e => e.trim().toLowerCase());
+    if (!paidUsersNormalized.includes(userEmail)) {
       return res.status(403).json({ message: "Access denied. Please pay first." });
     }
 
-    // Do not mask any URL, just return the original FileUrl
     const tenderData = {
       ...tender.toObject(),
       FileUrl: tender.FileUrl,

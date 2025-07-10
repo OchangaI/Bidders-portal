@@ -24,7 +24,10 @@ const TenderSchema = new mongoose.Schema(
     EntryDate: { type: Date, required: true },
     EntryDate: { type: Date, required: true },
     TUID: { type: String, required: true },
-    paidUsers: [String] // Array to store emails of paid users
+    paidUsers: {
+  type: [String],
+  default: []
+} // Array to store emails of paid users
   },
   { timestamps: true }
 );
