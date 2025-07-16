@@ -1,4 +1,5 @@
 import Subscription from "../models/Subscription.js";
+import Tender from "../models/Tender.js";
 import axios from "axios";
 
 export const subscribeUser = async (req, res) => {
@@ -8,17 +9,10 @@ export const subscribeUser = async (req, res) => {
       selectedCategories,
       selectedCountries,
       subscriptionType,
-      transaction_id,
       endDate,
     } = req.body;
 
     const today = new Date();
-    // const endDate = new Date(today);
-    // if (subscriptionType === "monthly") {
-    //   endDate.setMonth(endDate.getMonth() + 1);
-    // } else if (subscriptionType === "yearly") {
-    //   endDate.setFullYear(endDate.getFullYear() + 1);
-    // }
 
     const newSubscription = new Subscription({
       userEmail,
@@ -27,12 +21,11 @@ export const subscribeUser = async (req, res) => {
       subscriptionType,
       startDate: today,
       endDate,
-      paymentRef: transaction_id,
     });
 
     await newSubscription.save();
 
-    // Send confirmation email via Hazi
+    // Send confirmation email via Hazi (as before)
     const emailBody = `
       <h2>🎉 Subscription Confirmed!</h2>
       <p>Hi ${userEmail},</p>
@@ -45,28 +38,13 @@ export const subscribeUser = async (req, res) => {
       <p>— BiddersPortal Team</p>
     `;
 
-//     const emailBody = `
-// Hi ${userEmail},
-
-// Thank you for subscribing to our Tender Notification service.
-
-// Subscription Type: ${subscriptionType}
-// Selected Categories: ${selectedCategories.join(", ")}
-// Selected Countries: ${selectedCountries.join(", ")}
-
-// You will receive daily updates starting from today. Stay tuned!
-
-// — BiddersPortal Team
-// `;
-
-
     await axios.post(
       "https://hazi.co.ke/api/v3/email/send",
       {
         recipient: userEmail,
-        name: userEmail.split("@")[0], // or use a real name if you have it
+        name: userEmail.split("@")[0],
         subject: "Your Tender Subscription is Confirmed ✅",
-        message: emailBody, // plain text or simple HTML
+        message: emailBody,
       },
       {
         headers: {
@@ -75,9 +53,54 @@ export const subscribeUser = async (req, res) => {
         },
       }
     );
-    
 
-    res.status(200).json({ message: "Subscription successful and email sent." });
+    // Fetch today's tenders matching user preferences
+    const tenders = await Tender.find({
+      createdAt: { $gte: new Date(today.setHours(0, 0, 0, 0)) },
+      category: { $in: selectedCategories },
+      country: { $in: selectedCountries },
+    });
+
+    let tenderListHTML = "<li>No new tenders today, but you'll start receiving alerts as soon as new ones are posted.</li>";
+    if (tenders.length > 0) {
+      tenderListHTML = tenders
+        .map(
+          (t) => `
+            <li>
+              <strong>${t.title}</strong> — ${t.country} <br />
+              <a href="${t.link}">View Details</a>
+            </li>
+          `
+        )
+        .join("");
+    }
+
+    const notificationBody = `
+      <h2>📢 Your Daily Tender Alerts</h2>
+      <p>Hi ${userEmail},</p>
+      <p>Here are new tenders matching your preferences:</p>
+      <ol>${tenderListHTML}</ol>
+      <br />
+      <p>— BiddersPortal Team</p>
+    `;
+
+    await axios.post(
+      "https://hazi.co.ke/api/v3/email/send",
+      {
+        recipient: userEmail,
+        name: userEmail.split("@")[0],
+        subject: "📩 New Tenders Matching Your Preferences",
+        message: notificationBody,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HAZI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.status(200).json({ message: "Subscription successful and emails sent." });
   } catch (error) {
     console.error("Subscription error:", error);
     res.status(500).json({ error: "An error occurred during subscription." });

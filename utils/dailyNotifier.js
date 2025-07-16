@@ -43,23 +43,27 @@ const sendDailyNotifications = async () => {
         <p>— BiddersPortal Team</p>
       `;
 
-      await axios.post("https://hazi.co.ke/api/v3/email/send", {
-        api_key: process.env.HAZI_API_KEY,
-        to: userEmail,
-        from: "notifications@biddersportal.com",
+      const response = await axios.post("https://hazi.co.ke/api/v3/email/send", {
+        api_key: process.env.HAZI_API_KEY, // Use your Hazi API key from environment variables
+        // api_key: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI2IiwianRpIjoiODA5ODdmMmNhNTU1MGFhMjI2YjFlNGE3MjNkZTU1NjU5NTBiNzllMTVhZTE3MmFkZjNkY2I3ZTdkYjczNjM1YzA3ZThhYWQyMzJiODFjYTgiLCJpYXQiOjE3NTIwNTQ5ODQuNjY5Njc2LCJuYmYiOjE3NTIwNTQ5ODQuNjY5Njc4LCJleHAiOjE3ODM1OTA5ODQuNjYzMzk2LCJzdWIiOiI4NiIsInNjb3BlcyI6W119.dBmISuhWT7MjGCBMzp1_rSP38KZHVUGpBGa0fgFBbf8aYqepEW80inOVjbFRqJFQXPdP18Xpl-xTqTgw76-Kbb9uEVCUF_Nmrr70zOZk405Ow_c34AMgKcBCJE-Os5DmXsA9Y9n_XAKlhMwNVFZYiuqMRpGe8VMCl-W8PukcHEX-7qvc-tYvyUg-a-QguPGyteBhq3OL7a9WKFn3LtuGtY_gCi7Hr5_hQ6KoyaBe1QXGPV8WYYWarW9FEzBf0XjsK71xbigBH8aFDoSn0XbvGFdA_Bwd3l87amZjhMBJeFPcPeT0kiPum6laGZvk5fvWqXU7PCVHdPMuQEafzk_sZvk7GBiUO0DveUFGnb44KCySN06BazF37SDtlkNalbdqC1ciNnQk0LlpyeFCThQHXGyeBtJg-wiWeIkNhx47pxJrMo2z_1Sw4zCUMNL9Idpw9D2kN6VpzP5uc_u4ARGlYZvZrVOur93pAofkEFISGuPdCogDzEoKY_R4Tsxk6ArpeCui-5Ci5WxyydqzLkqQPLK78jKVWYW27m9VfDm67aBlGTtQH8m4h9bu5R3WI__losE9LEAi1d2hCN5J8o8TDwhgQdfPXzom2A8LGSc3aOrO8Q0S3ityXNkrkn-YZHcSCASeyObIUuI_Edu1GKGBfkJ21s-mWP2NHNvgFckZF_4",
+        recipient: userEmail,
+        name: userEmail, // or user's name if available
         subject: "📩 New Tenders Matching Your Preferences",
-        html: emailBody,
+        message: emailBody, // use plain text or HTML if supported
       });
+      console.log("Email API response:", response.data);
+      console.log(`📧 Notification sent to: ${userEmail}`);
     }
 
     console.log(`✅ Daily notifications sent. ${subscribers.length} users notified.`);
+    console.log(`✅ Daily notifications sent to. ${subscribers}`);
   } catch (err) {
-    console.error("❌ Error sending daily notifications:", err.message);
+    console.error("❌ Error sending daily notifications:", err);
   }
 };
 
 // Run every day at 8 AM
-cron.schedule("0 13 * * *", () => {
+cron.schedule("0 16 * * *", () => {
   console.log("🚀 Running daily tender notification job...");
   sendDailyNotifications();
 });

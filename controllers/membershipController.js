@@ -1,13 +1,14 @@
 import Membership from '../models/Membership.js';
+import axios from 'axios';
 
 // Register new membership
 export const registerMembership = async (req, res) => {
   try {
     console.log("Received Membership Request:", req.body);
 
-    const { email, name, subscriptionType, transactionId } = req.body;
+    const { email, name, subscriptionType, } = req.body;
 
-    if (!email || !name || !subscriptionType || !transactionId) {
+    if (!email || !name || !subscriptionType ) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -24,7 +25,6 @@ export const registerMembership = async (req, res) => {
       email,
       name,
       subscriptionType,
-      transactionId,
       endDate,
     });
 
@@ -37,6 +37,9 @@ export const registerMembership = async (req, res) => {
 
     console.log(`New membership registered:`, newMembership);
   } catch (error) {
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
+      return res.status(400).json({ error: 'User is already a member.' });
+    }
     console.error('Error registering membership:', error);
     res.status(500).json({ error: error.message });
   }
@@ -76,13 +79,13 @@ const sendMembershipConfirmationEmail = async ({ email, name, subscriptionType, 
 
     // Using your email API (example with Hazi.co.ke API)
     await axios.post('https://hazi.co.ke/api/v3/email/send', {
-      to: email,
+      recipient: email,
+      name: name,
       subject,
       message,
-      from: "info@biddersportal.com", // Replace with your verified sender
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.HAZI_API_KEY}`, // Replace with your actual API key
+        'Authorization': `Bearer ${process.env.HAZI_API_KEY}`,
         'Content-Type': 'application/json',
       },
     });
@@ -161,5 +164,37 @@ export const deleteMembership = async (req, res) => {
     res.json({ message: 'Membership deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Payment success handler (to be called after payment is processed)
+export const handlePaymentSuccess = async (req, res) => {
+  try {
+    const { email, transactionId } = req.body;
+
+    // Find the membership by transaction ID
+    const membership = await Membership.findOne({ transactionId });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'Membership not found' });
+    }
+
+    // Update membership status to active
+    membership.status = 'active';
+    await membership.save();
+
+    res.json({ message: 'Payment successful, membership activated.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Frontend payment success handler (to be used in client-side code)
+export const frontendPaymentSuccessHandler = async (res) => {
+  if (res.ok) {
+    alert('Payment successful! Membership activated.');
+  } else {
+    const error = await res.json();
+    alert('Payment successful but failed to activate membership: ' + (error.error || error.message));
   }
 };

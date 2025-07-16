@@ -2,7 +2,7 @@ import express from "express";
 import axios from "axios";
 import PreQualification from "../models/PreQualification.js";
 
-import { verifyAdmin } from "../middleware/adminMiddleware.js";
+// import { verifyAdmin } from "../middleware/adminMiddleware.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -17,21 +17,41 @@ const sendPrequalificationEmail = async (to, type, variables) => {
     Supplier: {
       prequalification_pending: {
         subject: "Your Supplier Pre-Qualification Request is Pending",
-        body: "Dear {{companyName}},\n\nYour supplier pre-qualification request is currently pending. We will notify you once it is reviewed.\n\nThank you.",
+        body: `Dear {{companyName}},
+        
+        Your supplier pre-qualification request is currently pending. 
+        We will notify you once it is reviewed.
+
+        Thank you.`,
       },
       prequalification_approved: {
         subject: "Your Supplier Pre-Qualification Request is Approved",
-        body: "Dear {{companyName}},\n\nCongratulations! Your supplier pre-qualification request has been approved.\n\nThank you.",
+        body: `Dear {{companyName}},
+        
+        Congratulations! 
+        Your supplier pre-qualification request has been approved.
+        
+        Thank you.`,
       },
     },
     Client: {
       prequalification_pending: {
         subject: "Your Client Pre-Qualification Request is Pending",
-        body: "Dear {{companyName}},\n\nYour client pre-qualification request is currently pending. We will notify you once it is reviewed.\n\nThank you.",
+        body: `Dear {{companyName}},
+        
+        Your client pre-qualification request is currently pending. 
+        We will notify you once it is reviewed.
+        
+        Thank you.`,
       },
       prequalification_approved: {
         subject: "Your Client Pre-Qualification Request is Approved",
-        body: "Dear {{companyName}},\n\nCongratulations! Your client pre-qualification request has been approved.\n\nThank you.",
+        body: `Dear {{companyName}},
+        
+        Congratulations!
+        Your client pre-qualification request has been approved.
+        
+        Thank you.`,
       },
     },
     // Add more templates as needed
@@ -97,7 +117,6 @@ router.post("/submit", async (req, res) => {
       amountPaid,
       currency,
       paymentStatus: "Paid",
-      // transactionId: tx_ref,
     });
 
     await preQualification.save();
@@ -109,6 +128,7 @@ router.post("/submit", async (req, res) => {
       console.error("Error sending prequalification email:", emailError);
     }
 
+    res.status(201).json({ message: "Prequalification submitted successfully" });
   } catch (error) {
     console.error("Error processing pre-qualification:", error);
     res.status(500).json({ message: "Server error" });
@@ -139,58 +159,6 @@ router.put("/update-status", async (req, res) => {
   }
 });
 
-// ✅ Confirm Payment & Update Status
-// router.post("/confirm-payment", async (req, res) => {
-//   try {
-//     const { transactionId } = req.body;
-
-//     // ✅ Verify Payment with Flutterwave
-//     const verifyResponse = await axios.get(
-//       `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`,
-//       { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } }
-//     );
-
-//     if (!verifyResponse.data || verifyResponse.data.status !== "success") {
-//       return res.status(400).json({ message: "Payment verification failed" });
-//     }
-
-//     // ✅ Update Pre-Qualification Status
-//     const preQualification = await PreQualification.findOneAndUpdate(
-//       { transactionId },
-//       { paymentStatus: "Paid" },
-//       { new: true }
-//     );
-
-//     if (!preQualification) {
-//       return res.status(404).json({ message: "Pre-qualification record not found" });
-//     }
-
-//     // ✅ Send Confirmation Email
-//     await axios.post(
-//       "https://hazi.co.ke/api/v3/email/send",
-//       {
-//         recipient: preQualification.emailAddress,
-//         recipient_name: preQualification.companyName,
-//         subject: `${preQualification.type} Pre-Qualification Confirmation`,
-//         message: `
-//           <h2>Congratulations! 🎉</h2>
-//           <p>You have successfully completed your ${preQualification.type} pre-qualification.</p>
-//           <p><strong>Company:</strong> ${preQualification.companyName}</p>
-//           <p><strong>Country:</strong> ${preQualification.country}</p>
-//           <p><strong>Categories of Interest:</strong> ${preQualification.categoriesOfInterest.join(", ")}</p>
-//           <p><strong>Amount Paid:</strong> ${preQualification.currency} ${preQualification.amountPaid}</p>
-//           <p>Thank you for using our platform!</p>
-//         `,
-//       },
-//       { headers: { Authorization: `Bearer ${process.env.HAZI_API_KEY}` } }
-//     );
-
-//     res.json({ message: "Payment confirmed & email sent" });
-//   } catch (error) {
-//     console.error("Error confirming payment:", error);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
 
 // Get all prequalification requests
 router.get("/", async (req, res) => {
@@ -199,6 +167,18 @@ router.get("/", async (req, res) => {
     res.status(200).json(requests);
   } catch (error) {
     res.status(500).json({ message: "Error fetching prequalification requests", error });
+  }
+});
+
+// ✅ Fetch User Pre-Qualifications
+router.get("/user/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const preQualifications = await PreQualification.find({ emailAddress: email, paymentStatus: "Paid" });
+    res.json(preQualifications);
+  } catch (error) {
+    console.error("Error fetching pre-qualifications:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -215,16 +195,6 @@ router.get("/:id", async (req, res) => {
       }
     });
 
-// ✅ Fetch User Pre-Qualifications
-router.get("/user/:email", async (req, res) => {
-  try {
-    const { email } = req.params;
-    const preQualifications = await PreQualification.find({ emailAddress: email, paymentStatus: "Paid" });
-    res.json(preQualifications);
-  } catch (error) {
-    console.error("Error fetching pre-qualifications:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+
 
 export default router;

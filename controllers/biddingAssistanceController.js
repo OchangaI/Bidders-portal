@@ -1,10 +1,6 @@
 import BiddingAssistance from "../models/BiddingAssistance.js";
 import axios from "axios";
 import dotenv from "dotenv";
-import IntaSend from "intasend-node"; // Import IntaSend SDK
-
-// Initialize IntaSend with your API keys
-// const intasend = new IntaSend(process.env.INTASEND_SECRET_KEY, process.env.INTASEND_PUBLIC_KEY);
 
 /**
  * Send Confirmation Email using HAZI
@@ -17,7 +13,17 @@ export const sendConfirmationEmail = async (email, name, details) => {
         recipient: email,
         name: name,
         subject: "Bidding Assistance Request Received",
-        message: `Hello ${name},\n\nYour bidding assistance request has been received. Our team will get back to you shortly.\n\nDetails: ${details}\n\nThank you for using our services.`,
+        message: `
+          Hello ${name},
+
+          Your bidding assistance request has been received.
+          Our team will get back to you shortly.
+
+          Details:
+          ${details}
+
+          Thank you for using our services.
+          `,
       },
       {
         headers: {
@@ -32,71 +38,30 @@ export const sendConfirmationEmail = async (email, name, details) => {
   }
 };
 
-// /**
-//  * Initialize Payment with IntaSend
-//  */
-export const initializePayment = async (req, res) => {
+/**
+ * Create Bidding Assistance Request (without payment verification)
+ */
+export const createBiddingRequest = async (req, res) => {
   try {
-    const { name, email, details, amount, currency } = req.body;
+    const { name, email, details} = req.body;
 
-    if (!email || !amount || !currency) {
-      return res.status(400).json({ success: false, message: "Missing payment details" });
+    if (!name || !email || !details) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // Initialize Payment via IntaSend
-    const paymentResponse = await IntaSend.payment.initialize({
+    const newRequest = new BiddingAssistance({
+      name,
       email,
-      amount,
-      currency,
-      callback_url: 'https://biddersportal.com/payment-success',
-      // callback_url: 'http://localhost:5000/payment-success',
+      details,
     });
 
-    console.log("Payment Initialized:", paymentResponse);
+    await newRequest.save();
+    await sendConfirmationEmail(email, name, details);
 
-    if (paymentResponse.checkout_url) {
-      res.json({ success: true, checkout_url: paymentResponse.checkout_url });
-    } else {
-      res.status(500).json({ success: false, message: "Failed to initialize payment" });
-    }
+    return res.json({ success: true, message: "Bidding assistance request created" });
   } catch (error) {
-    console.error("IntaSend Payment Error:", error.message);
-    res.status(500).json({ success: false, message: "Payment initialization failed", error: error.message });
-  }
-};
-
-/**
- * Handle Payment Confirmation (Webhook)
- */
-export const confirmPayment = async (req, res) => {
-  try {
-    const { transaction_id, status, email, amount, currency } = req.body;
-
-    if (status === "SUCCESS") {
-      const existingRequest = await BiddingAssistance.findOne({ transactionId: transaction_id });
-
-      if (!existingRequest) {
-        const newRequest = new BiddingAssistance({
-          name: req.body.name || "Unknown",
-          email,
-          details: req.body.details || "No details provided",
-          amountPaid: amount,
-          currency,
-          transactionId: transaction_id,
-          paymentStatus: "successful",
-        });
-
-        await newRequest.save();
-        await sendConfirmationEmail(email, req.body.name, req.body.details);
-      }
-
-      return res.json({ success: true, message: "Payment confirmed" });
-    }
-
-    res.status(400).json({ success: false, message: "Payment not successful" });
-  } catch (error) {
-    console.error("Payment Confirmation Error:", error.message);
-    res.status(500).json({ success: false, message: "Payment confirmation failed", error: error.message });
+    console.error("Error creating bidding assistance request:", error.message);
+    res.status(500).json({ success: false, message: "Failed to create request", error: error.message });
   }
 };
 
