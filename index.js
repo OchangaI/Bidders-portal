@@ -275,9 +275,12 @@ import biddingAssistanceRoutes from "./routes/biddingAssistanceRoutes.js";
 // app.use(cors({ origin: process.env.FRONTEND_URL }));
 import notificationRoutes from "./routes/notificationRoutes.js";
 import statsRoutes from "./routes/stats.js";
+import transactionsRoutes from "./routes/transactionsRoutes.js";
+import dashboardUserRoutes from "./routes/dashboardUserRoutes.js";
 
 app.use("/api", statsRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/dashboard-users", dashboardUserRoutes);
 app.use("/api/tenders", tenderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paypalRoutes);
@@ -291,10 +294,8 @@ app.use("/api/bidding-assistance", biddingAssistanceRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/tenders", tenderRoutes);
 app.use("/api/admin", adminRoutes);
-// app.use("/api/payments", paypalRoutes);
-// app.use("/api/notifications", notificationRoutes);
-// app.use("/api/notifications", subscriptionRoutes);
-// app.use("/api/prequalification", preQualificationRoutes);
+app.use("/api/transactions", transactionsRoutes);
+
 
 // ✅ Schedule the tender import to run every 24 hours (midnight)
 cron.schedule("0 0 * * *", async () => {

@@ -24,6 +24,7 @@ const sendPrequalificationEmail = async (to, type, variables) => {
 
         Thank you.`,
       },
+      
       prequalification_approved: {
         subject: "Your Supplier Pre-Qualification Request is Approved",
         body: `Dear {{companyName}},
